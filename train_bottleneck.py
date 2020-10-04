@@ -3,18 +3,19 @@ Retrain the YOLO model for your own dataset.
 """
 import os
 import numpy as np
-import keras.backend as K
-from keras.layers import Input, Lambda
-from keras.models import Model
-from keras.optimizers import Adam
-from keras.callbacks import TensorBoard, ModelCheckpoint, ReduceLROnPlateau, EarlyStopping
+import tensorflow.keras.backend as K
+from tensorflow.keras.layers import Input, Lambda
+from tensorflow.keras.models import Model
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.callbacks import TensorBoard, ModelCheckpoint, ReduceLROnPlateau, EarlyStopping
 
-from yolo3.model import preprocess_true_boxes, yolo_body, tiny_yolo_body, yolo_loss
-from yolo3.utils import get_random_data
+from yolo4.model import preprocess_true_boxes, yolo_body, tiny_yolo_body, yolo_loss
+from yolo4.utils import get_random_data
 
 
 def _main():
-    annotation_path = 'train.txt'
+    #annotation_path = 'train.txt'
+    annotation_path = '2017_train.txt'
     log_dir = 'logs/000/'
     classes_path = 'model_data/coco_classes.txt'
     anchors_path = 'model_data/yolo_anchors.txt'
@@ -25,7 +26,8 @@ def _main():
     input_shape = (416,416) # multiple of 32, hw
 
     model, bottleneck_model, last_layer_model = create_model(input_shape, anchors, num_classes,
-            freeze_body=2, weights_path='model_data/yolo_weights.h5') # make sure you know what you freeze
+            #freeze_body=2, weights_path='model_data/yolo_weights.h5') # make sure you know what you freeze
+            freeze_body=2, weights_path='yolo_weights.h5') # make sure you know what you freeze
 
     logging = TensorBoard(log_dir=log_dir)
     checkpoint = ModelCheckpoint(log_dir + 'ep{epoch:03d}-loss{loss:.3f}-val_loss{val_loss:.3f}.h5',

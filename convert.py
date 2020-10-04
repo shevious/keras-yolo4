@@ -2,9 +2,9 @@ import os
 import colorsys
 
 import numpy as np
-from keras import backend as K
-from keras.models import load_model
-from keras.layers import Input
+from tensorflow.keras import backend as K
+from tensorflow.keras.models import load_model
+from tensorflow.keras.layers import Input
 
 from yolo4.model import yolo_eval, yolo4_body
 from yolo4.utils import letterbox_image
@@ -14,6 +14,8 @@ from timeit import default_timer as timer
 import matplotlib.pyplot as plt
 
 from operator import itemgetter
+
+import tensorflow as tf
 
 class Yolo4(object):
     def get_class(self):
@@ -48,10 +50,13 @@ class Yolo4(object):
             map(lambda x: (int(x[0] * 255), int(x[1] * 255), int(x[2] * 255)),
                 self.colors))
 
-        self.sess = K.get_session()
+        #self.sess = K.get_session()
 
         # Load model, or construct model and load weights.
         self.yolo4_model = yolo4_body(Input(shape=(608, 608, 3)), num_anchors//3, num_classes)
+        #print(self.yolo4_model.summary())
+        #print('num_anchors =', num_anchors)
+        #print('num_classes =', num_classes)
 
         # Read and convert darknet weight
         print('Loading weights.')
@@ -68,13 +73,18 @@ class Yolo4(object):
         bns_to_load = []
         for i in range(len(self.yolo4_model.layers)):
             layer_name = self.yolo4_model.layers[i].name
-            if layer_name.startswith('conv2d_'):
+            if layer_name == 'conv2d':
+                convs_to_load.append((0, i))
+            elif layer_name.startswith('conv2d_'):
                 convs_to_load.append((int(layer_name[7:]), i))
-            if layer_name.startswith('batch_normalization_'):
+            if layer_name == 'batch_normalization':
+                bns_to_load.append((0, i))
+            elif layer_name.startswith('batch_normalization_'):
                 bns_to_load.append((int(layer_name[20:]), i))
 
         convs_sorted = sorted(convs_to_load, key=itemgetter(0))
         bns_sorted = sorted(bns_to_load, key=itemgetter(0))
+        #print('bns_sorted = ', bns_sorted)
 
         bn_index = 0
         for i in range(len(convs_sorted)):
@@ -104,6 +114,16 @@ class Yolo4(object):
                 size = weights_shape[0]
                 bn_shape = self.yolo4_model.layers[bns_sorted[bn_index][1]].get_weights()[0].shape
                 filters = bn_shape[0]
+                '''
+                print('##')
+                print('i = ', i)
+                print('bn_index = ', bn_index)
+                print('convs_sorted[i][1] = ', convs_sorted[i][1])
+                print('bns_sorted[bn_index][1] = ', bns_sorted[bn_index][1])
+                print('bn_shape = ', bn_shape)
+                print('w layer name = ', self.yolo4_model.layers[convs_sorted[i][1]].name)
+                print('bn layer name = ', self.yolo4_model.layers[bns_sorted[bn_index][1]].name)
+                '''
                 darknet_w_shape = (filters, weights_shape[2], size, size)
                 weights_size = np.product(weights_shape)
 
@@ -136,6 +156,11 @@ class Yolo4(object):
         weights_file.close()
 
         self.yolo4_model.save(self.model_path)
+        for i in range(len(self.yolo4_model.layers)):
+            lens = len(self.yolo4_model.layers[i].get_weights())
+            for j in range(lens):
+              shape = self.yolo4_model.layers[i].get_weights()[j].shape
+              print('i = ', i, 'shape = ', shape)
 
 
         if self.gpu_num>=2:
@@ -172,4 +197,4 @@ if __name__ == '__main__':
 
     yolo4_model = Yolo4(score, iou, anchors_path, classes_path, model_path, weights_path)
 
-    yolo4_model.close_session()
+    #yolo4_model.close_session()

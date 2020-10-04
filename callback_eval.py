@@ -1,6 +1,6 @@
 import numpy as np
-import keras
-import keras.backend as K
+from tensorflow import keras
+import tensorflow.keras.backend as K
 from timeit import default_timer as timer
 
 import skimage.io as io
@@ -55,7 +55,7 @@ class Evaluate(keras.callbacks.Callback):
         self.log_dir         = log_dir
         self.verbose         = verbose
 
-        self.sess = K.get_session()
+        #self.sess = K.get_session()
 
         # 验证时的分数阈值和nms_iou阈值
         conf_thresh = score_threshold
@@ -272,6 +272,7 @@ class Evaluate(keras.callbacks.Callback):
 
     def on_epoch_end(self, epoch, logs=None):
         weight_latest = search_all_files_return_by_time_reversed(self.log_dir)[0]
+        print('')
         print("Epoch end eval mAP on weight {}".format(weight_latest))
         self.model_body.load_weights(weight_latest)
         self.calc_result(epoch)
@@ -290,3 +291,4 @@ class Evaluate(keras.callbacks.Callback):
         mAP = np.sum(aps * counts) / np.sum(counts)
 
         print('Epoch {} mAP {}'.format(epoch+1, mAP))
+        print('')

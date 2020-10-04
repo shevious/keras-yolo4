@@ -5,14 +5,14 @@ from functools import wraps
 import math
 import numpy as np
 import tensorflow as tf
-import keras
-from keras import backend as K
-from keras.engine.base_layer import Layer
-from keras.layers import Conv2D, Add, ZeroPadding2D, UpSampling2D, Concatenate, MaxPooling2D
-from keras.layers.advanced_activations import LeakyReLU
-from keras.layers.normalization import BatchNormalization
-from keras.models import Model
-from keras.regularizers import l2
+from tensorflow import keras
+from tensorflow.keras import backend as K
+from tensorflow.keras.layers import Layer
+from tensorflow.keras.layers import Conv2D, Add, ZeroPadding2D, UpSampling2D, Concatenate, MaxPooling2D
+from tensorflow.keras.layers import LeakyReLU
+from tensorflow.python.keras.layers.normalization import BatchNormalization
+from tensorflow.keras.models import Model
+from tensorflow.keras.regularizers import l2
 
 from yolo4.utils import compose
 
@@ -532,6 +532,7 @@ def yolo_loss(args, num_classes, iou_loss_thresh, anchors):
 
     loss = ciou_loss + conf_loss + prob_loss
 
-    loss = tf.Print(loss, [loss, ciou_loss, conf_loss, prob_loss], message='loss: ')
+    loss = tf.compat.v1.Print(loss, [loss, ciou_loss, conf_loss, prob_loss], message=' loss: ')
+    #tf.print([loss, ciou_loss, conf_loss, prob_loss])
 
     return loss

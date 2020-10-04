@@ -2,9 +2,9 @@ import os
 import colorsys
 
 import numpy as np
-from keras import backend as K
-from keras.models import load_model
-from keras.layers import Input
+from tensorflow.keras import backend as K
+from tensorflow.keras.models import load_model
+from tensorflow.keras.layers import Input
 
 from yolo4.model import yolo_eval, yolo4_body
 from yolo4.utils import letterbox_image
@@ -33,9 +33,14 @@ def get_anchors(anchors_path):
 if __name__ == '__main__':
     print('Please visit https://github.com/miemie2013/Keras-YOLOv4 for more complete model!')
 
-    model_path = 'ep073-loss11.905.h5'
+    model_path = 'yolo4_weight.h5'
+    model_path = 'logs/000/'+'ep018-loss25.846.h5' # voc 2007 neck
+    model_path = 'logs/000/'+'ep046-loss6.901.h5' # raccoon neck
+    model_path = 'ep009-loss3.856.h5' # raccoon fine tuned
     anchors_path = 'model_data/yolo4_anchors.txt'
     classes_path = 'model_data/voc_classes.txt'
+    #classes_path = 'model_data/raccoon_classes.txt'
+    #classes_path = 'model_data/coco_classes.txt'
 
     class_names = get_class(classes_path)
     anchors = get_anchors(anchors_path)

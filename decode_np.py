@@ -5,6 +5,7 @@ import cv2
 import threading
 import os
 import numpy as np
+from scipy.special import expit
 
 
 class Decode(object):
@@ -144,7 +145,7 @@ class Decode(object):
 
 
     def _sigmoid(self, x):
-        return 1 / (1 + np.exp(-x))
+        return expit(x)
 
     def _process_feats(self, out, anchors, mask):
         grid_h, grid_w, num_boxes = map(int, out.shape[1: 4])

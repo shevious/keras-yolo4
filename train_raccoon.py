@@ -33,12 +33,12 @@ def _main():
 
     print('Please visit https://github.com/miemie2013/Keras-YOLOv4 for more complete model!')
 
-    annotation_train_path = '2012_train.txt'
-    annotation_val_path = '2012_val.txt'
-    #annotation_train_path = '2007_train.txt'
-    #annotation_val_path = '2007_val.txt'
+    #annotation_train_path = '2012_train.txt'
+    #annotation_val_path = '2012_val.txt'
+    annotation_train_path = 'raccoon_train.txt'
+    annotation_val_path = 'raccoon_test.txt'
     log_dir = 'logs/000/'
-    classes_path = 'model_data/voc_classes.txt'
+    classes_path = 'model_data/raccoon_classes.txt'
     anchors_path = 'model_data/yolo4_anchors.txt'
     class_names = get_classes(classes_path)
     num_classes = len(class_names)
@@ -60,21 +60,24 @@ def _main():
 
     input_shape = (608, 608) # multiple of 32, hw
 
+    #model, model_body = create_model(input_shape, anchors_stride_base, num_classes, load_pretrained=False, freeze_body=2, weights_path='yolo4_weight.h5')
     model_path = 'yolo4_weight.h5'
-    #model_path = 'logs/000/'+'ep001-loss5261.659.h5'
-    #model_path = 'ep005-loss5.975.h5' # neck trained
-    model, model_body = create_model(input_shape, anchors_stride_base, num_classes,
-      load_pretrained=True, freeze_body=2,
+    #model_path = 'logs/000/'+ 'ep015-loss5.339.h5'
+    #model_path = 'logs/000/'+ 'ep009-loss3.856.h5'
+    model, model_body = create_model(input_shape, anchors_stride_base, num_classes, load_pretrained=True, freeze_body=2,
       weights_path=model_path)
+    #model.load_weights('logs/000/'+'ep001-loss5261.659.h5')
+    #chk = 'ep002-loss26.887.h5'
+    #model.load_weights('logs/000/'+chk)
 
     logging = TensorBoard(log_dir=log_dir)
     checkpoint = ModelCheckpoint(log_dir + 'ep{epoch:03d}-loss{loss:.3f}.h5',
         monitor='loss', save_weights_only=True, save_best_only=True, period=1)
-    reduce_lr = ReduceLROnPlateau(monitor='loss', factor=0.1, patience=3, verbose=1)
-    early_stopping = EarlyStopping(monitor='loss', min_delta=0, patience=10, verbose=1)
-    #evaluation = Evaluate(model_body=model_body, anchors=anchors, class_names=class_index, score_threshold=0.05, tensorboard=logging, weighted_average=True, eval_file='2012_val.txt', log_dir=log_dir)
-    evaluation = Evaluate(model_body=model_body, anchors=anchors, class_names=class_index, score_threshold=0.05,
-        tensorboard=logging, weighted_average=True, eval_file=annotaion_val_file, log_dir=log_dir)
+    #reduce_lr = ReduceLROnPlateau(monitor='loss', factor=0.1, patience=3, verbose=1)
+    reduce_lr = ReduceLROnPlateau(monitor='loss', factor=0.1, patience=4, verbose=1)
+    #early_stopping = EarlyStopping(monitor='loss', min_delta=0, patience=10, verbose=1)
+    early_stopping = EarlyStopping(monitor='loss', min_delta=0, patience=12, verbose=1)
+    evaluation = Evaluate(model_body=model_body, anchors=anchors, class_names=class_index, score_threshold=0.05, tensorboard=logging, weighted_average=True, eval_file='raccoon_test.txt', log_dir=log_dir)
 
     with open(annotation_train_path) as f:
         lines_train = f.readlines()
@@ -94,9 +97,11 @@ def _main():
 
     # Train with frozen layers first, to get a stable loss.
     # Adjust num epochs to your dataset. This step is enough to obtain a not bad model.
-    if False:
+    #if False:
+    if True:
         model.compile(optimizer=Adam(lr=1e-3), loss={'yolo_loss': lambda y_true, y_pred: y_pred})
 
+        #batch_size = 16
         batch_size = 16
         print('Train on {} samples, val on {} samples, with batch size {}.'.format(num_train, num_val, batch_size))
         #model.fit_generator(data_generator_wrapper(lines_train[:num_train], batch_size, input_shape, anchors, num_classes),
@@ -104,12 +109,12 @@ def _main():
                 steps_per_epoch=max(1, num_train//batch_size),
                 epochs=50,
                 initial_epoch=0,
-                callbacks=[logging, checkpoint, reduce_lr, early_stopping])
-                #callbacks=[logging, checkpoint, reduce_lr, early_stopping, evaluation])
+                callbacks=[logging, checkpoint, reduce_lr, early_stopping, evaluation])
+                #callbacks=[logging, checkpoint, reduce_lr, early_stopping])
 
     # Unfreeze and continue training, to fine-tune.
     # Train longer if the result is not good.
-    if True:
+    if False:
         for i in range(len(model.layers)):
             model.layers[i].trainable = True
         model.compile(optimizer=Adam(lr=1e-5), loss={'yolo_loss': lambda y_true, y_pred: y_pred}) # recompile to apply the change
