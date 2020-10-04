@@ -62,7 +62,7 @@ def _main():
 
     model_path = 'yolo4_weight.h5'
     #model_path = 'logs/000/'+'ep001-loss5261.659.h5'
-    #model_path = 'ep005-loss5.975.h5' # neck trained
+    #model_path = 'logs-neck/000/'+'ep050-loss5.966.h5' # neck for voc2012
     model, model_body = create_model(input_shape, anchors_stride_base, num_classes,
       load_pretrained=True, freeze_body=2,
       weights_path=model_path)
@@ -74,7 +74,7 @@ def _main():
     early_stopping = EarlyStopping(monitor='loss', min_delta=0, patience=10, verbose=1)
     #evaluation = Evaluate(model_body=model_body, anchors=anchors, class_names=class_index, score_threshold=0.05, tensorboard=logging, weighted_average=True, eval_file='2012_val.txt', log_dir=log_dir)
     evaluation = Evaluate(model_body=model_body, anchors=anchors, class_names=class_index, score_threshold=0.05,
-        tensorboard=logging, weighted_average=True, eval_file=annotaion_val_file, log_dir=log_dir)
+        tensorboard=logging, weighted_average=True, eval_file=annotation_val_path, log_dir=log_dir)
 
     with open(annotation_train_path) as f:
         lines_train = f.readlines()
@@ -90,7 +90,7 @@ def _main():
     np.random.seed(None)
     num_val = len(lines_val)
 
-    #evaluation.on_epoch_end(1)
+    #evaluation.on_epoch_end(27)
 
     # Train with frozen layers first, to get a stable loss.
     # Adjust num epochs to your dataset. This step is enough to obtain a not bad model.
