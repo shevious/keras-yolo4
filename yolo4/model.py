@@ -328,7 +328,7 @@ def preprocess_true_boxes(bboxes, train_output_sizes, strides, num_classes, max_
         best_detect = int(best_anchor_ind / 3)
         best_anchor = int(best_anchor_ind % 3)
         xind, yind = np.floor(bbox_xywh_scaled[best_detect, 0:2]).astype(np.int32)
-        # 防止越界
+        # Prevent crossing
         grid_r = label[best_detect].shape[0]
         grid_c = label[best_detect].shape[1]
         xind = max(0, xind)
@@ -349,57 +349,57 @@ def preprocess_true_boxes(bboxes, train_output_sizes, strides, num_classes, max_
 
 def bbox_ciou(boxes1, boxes2):
     '''
-    计算ciou = iou - p2/c2 - av
+    caluate ciou = iou - p2/c2 - av
     :param boxes1: (8, 13, 13, 3, 4)   pred_xywh
     :param boxes2: (8, 13, 13, 3, 4)   label_xywh
     :return:
 
-    举例时假设pred_xywh和label_xywh的shape都是(1, 4)
+    For example, assume that the shapes of pred_xywh and label_xywh are both (1, 4)
     '''
 
-    # 变成左上角坐标、右下角坐标
+    # convert to the upper left corner coordinate, the lower right corner coordinate
     boxes1_x0y0x1y1 = tf.concat([boxes1[..., :2] - boxes1[..., 2:] * 0.5,
                                  boxes1[..., :2] + boxes1[..., 2:] * 0.5], axis=-1)
     boxes2_x0y0x1y1 = tf.concat([boxes2[..., :2] - boxes2[..., 2:] * 0.5,
                                  boxes2[..., :2] + boxes2[..., 2:] * 0.5], axis=-1)
     '''
-    逐个位置比较boxes1_x0y0x1y1[..., :2]和boxes1_x0y0x1y1[..., 2:]，即逐个位置比较[x0, y0]和[x1, y1]，小的留下。
-    比如留下了[x0, y0]
-    这一步是为了避免一开始w h 是负数，导致x0y0成了右下角坐标，x1y1成了左上角坐标。
+    Compare boxes1_x0y0x1y1[..., :2] and boxes1_x0y0x1y1[..., 2:] position by position, that is, compare [x0, y0] and [x1, y1] position by position, leaving the smaller ones.
+    For example, leaving [x0, y0]
+    This step is to avoid that w h is a negative number at the beginning, causing x0y0 to become the coordinates of the lower right corner and x1y1 to become the coordinates of the upper left corner.
     '''
     boxes1_x0y0x1y1 = tf.concat([tf.minimum(boxes1_x0y0x1y1[..., :2], boxes1_x0y0x1y1[..., 2:]),
                                  tf.maximum(boxes1_x0y0x1y1[..., :2], boxes1_x0y0x1y1[..., 2:])], axis=-1)
     boxes2_x0y0x1y1 = tf.concat([tf.minimum(boxes2_x0y0x1y1[..., :2], boxes2_x0y0x1y1[..., 2:]),
                                  tf.maximum(boxes2_x0y0x1y1[..., :2], boxes2_x0y0x1y1[..., 2:])], axis=-1)
 
-    # 两个矩形的面积
+    # The area of the two rectangles
     boxes1_area = (boxes1_x0y0x1y1[..., 2] - boxes1_x0y0x1y1[..., 0]) * (
                 boxes1_x0y0x1y1[..., 3] - boxes1_x0y0x1y1[..., 1])
     boxes2_area = (boxes2_x0y0x1y1[..., 2] - boxes2_x0y0x1y1[..., 0]) * (
                 boxes2_x0y0x1y1[..., 3] - boxes2_x0y0x1y1[..., 1])
 
-    # 相交矩形的左上角坐标、右下角坐标，shape 都是 (8, 13, 13, 3, 2)
+    # The coordinates of the upper left corner and the lower right corner of the intersecting rectangle, the shapes are both (8, 13, 13, 3, 2)
     left_up = tf.maximum(boxes1_x0y0x1y1[..., :2], boxes2_x0y0x1y1[..., :2])
     right_down = tf.minimum(boxes1_x0y0x1y1[..., 2:], boxes2_x0y0x1y1[..., 2:])
 
-    # 相交矩形的面积inter_area。iou
+    # The area of the intersecting rectangle inter_area. iou
     inter_section = tf.maximum(right_down - left_up, 0.0)
     inter_area = inter_section[..., 0] * inter_section[..., 1]
     union_area = boxes1_area + boxes2_area - inter_area
     iou = inter_area / (union_area + K.epsilon())
 
-    # 包围矩形的左上角坐标、右下角坐标，shape 都是 (8, 13, 13, 3, 2)
+    # The coordinates of the upper left corner and the lower right corner of the enclosing rectangle, the shape is (8, 13, 13, 3, 2)
     enclose_left_up = tf.minimum(boxes1_x0y0x1y1[..., :2], boxes2_x0y0x1y1[..., :2])
     enclose_right_down = tf.maximum(boxes1_x0y0x1y1[..., 2:], boxes2_x0y0x1y1[..., 2:])
 
-    # 包围矩形的对角线的平方
+    # The square of the diagonal of the enclosing rectangle
     enclose_wh = enclose_right_down - enclose_left_up
     enclose_c2 = K.pow(enclose_wh[..., 0], 2) + K.pow(enclose_wh[..., 1], 2)
 
-    # 两矩形中心点距离的平方
+    # The square of the distance between the center points of the two rectangles
     p2 = K.pow(boxes1[..., 0] - boxes2[..., 0], 2) + K.pow(boxes1[..., 1] - boxes2[..., 1], 2)
 
-    # 增加av。加上除0保护防止nan。
+    # Increase av. Add division by 0 protection to prevent nan.
     atan1 = tf.atan(boxes1[..., 2] / (boxes1[..., 3] + K.epsilon()))
     atan2 = tf.atan(boxes2[..., 2] / (boxes2[..., 3] + K.epsilon()))
     v = 4.0 * K.pow(atan1 - atan2, 2) / (math.pi ** 2)
@@ -411,24 +411,24 @@ def bbox_ciou(boxes1, boxes2):
 
 def bbox_iou(boxes1, boxes2):
     '''
-    预测框          boxes1 (?, grid_h, grid_w, 3,   1, 4)，神经网络的输出(tx, ty, tw, th)经过了后处理求得的(bx, by, bw, bh)
-    图片中所有的gt  boxes2 (?,      1,      1, 1, 150, 4)
+    Measuring frame boxes1 (?, grid_h, grid_w, 3, 1, 4), the output of the neural network (tx, ty, tw, th) is obtained by post-processing (bx, by, bw, bh)
+    All gt boxes2 in the picture (?, 1, 1, 1, 150, 4)
     '''
-    boxes1_area = boxes1[..., 2] * boxes1[..., 3]  # 所有格子的3个预测框的面积
-    boxes2_area = boxes2[..., 2] * boxes2[..., 3]  # 所有ground truth的面积
+    boxes1_area = boxes1[..., 2] * boxes1[..., 3]  # Area of 3 prediction boxes of all grids
+    boxes2_area = boxes2[..., 2] * boxes2[..., 3]  # The area of all ground truth
 
-    # (x, y, w, h)变成(x0, y0, x1, y1)
+    # (x, y, w, h) to (x0, y0, x1, y1)
     boxes1 = tf.concat([boxes1[..., :2] - boxes1[..., 2:] * 0.5,
                         boxes1[..., :2] + boxes1[..., 2:] * 0.5], axis=-1)
     boxes2 = tf.concat([boxes2[..., :2] - boxes2[..., 2:] * 0.5,
                         boxes2[..., :2] + boxes2[..., 2:] * 0.5], axis=-1)
 
-    # 所有格子的3个预测框 分别 和  150个ground truth  计算iou。 所以left_up和right_down的shape = (?, grid_h, grid_w, 3, 150, 2)
-    left_up = tf.maximum(boxes1[..., :2], boxes2[..., :2])  # 相交矩形的左上角坐标
-    right_down = tf.minimum(boxes1[..., 2:], boxes2[..., 2:])  # 相交矩形的右下角坐标
+    # 3 prediction boxes with grids and 150 ground truth calculation iou respectively. So the shape of left_up and right_down = (?, grid_h, grid_w, 3, 150, 2)
+    left_up = tf.maximum(boxes1[..., :2], boxes2[..., :2])  # The coordinates of the upper left corner of the intersecting rectangle
+    right_down = tf.minimum(boxes1[..., 2:], boxes2[..., 2:])  # The coordinates of the lower right corner of the intersecting rectangle
 
-    inter_section = tf.maximum(right_down - left_up, 0.0)  # 相交矩形的w和h，是负数时取0     (?, grid_h, grid_w, 3, 150, 2)
-    inter_area = inter_section[..., 0] * inter_section[..., 1]  # 相交矩形的面积            (?, grid_h, grid_w, 3, 150)
+    inter_section = tf.maximum(right_down - left_up, 0.0)  # The w and h of the intersecting rectangle are 0 when they are negative (?, grid_h, grid_w, 3, 150, 2)
+    inter_area = inter_section[..., 0] * inter_section[..., 1]  # Area of the intersecting rectangle (?, grid_h, grid_w, 3, 150)
     union_area = boxes1_area + boxes2_area - inter_area  # union_area      (?, grid_h, grid_w, 3, 150)
     iou = 1.0 * inter_area / union_area  # iou                             (?, grid_h, grid_w, 3, 150)
     return iou
@@ -452,38 +452,38 @@ def loss_layer(conv, pred, label, bboxes, stride, num_class, iou_loss_thresh):
     ciou = tf.expand_dims(bbox_ciou(pred_xywh, label_xywh), axis=-1)  # (8, 13, 13, 3, 1)
     input_size = tf.cast(input_size, tf.float32)
 
-    # 每个预测框xxxiou_loss的权重 = 2 - (ground truth的面积/图片面积)
+    # The weight of each prediction box xxxiou_loss = 2-(ground truth area/picture area)
     bbox_loss_scale = 2.0 - 1.0 * label_xywh[:, :, :, :, 2:3] * label_xywh[:, :, :, :, 3:4] / (input_size ** 2)
-    ciou_loss = respond_bbox * bbox_loss_scale * (1 - ciou)  # 1. respond_bbox作为mask，有物体才计算xxxiou_loss
+    ciou_loss = respond_bbox * bbox_loss_scale * (1 - ciou) # 1. respond_bbox is used as a mask, xxxiou_loss is calculated only when there is an object
 
-    # 2. respond_bbox作为mask，有物体才计算类别loss
+    # 2. respond_bbox is used as a mask, and the category loss is calculated when there is an object
     prob_loss = respond_bbox * tf.nn.sigmoid_cross_entropy_with_logits(labels=label_prob, logits=conv_raw_prob)
 
-    # 3. xxxiou_loss和类别loss比较简单。重要的是conf_loss，是一个focal_loss
-    # 分两步：第一步是确定 grid_h * grid_w * 3 个预测框 哪些作为反例；第二步是计算focal_loss。
-    expand_pred_xywh = pred_xywh[:, :, :, :, np.newaxis, :]  # 扩展为(?, grid_h, grid_w, 3,   1, 4)
-    expand_bboxes = bboxes[:, np.newaxis, np.newaxis, np.newaxis, :, :]  # 扩展为(?,      1,      1, 1, 150, 4)
-    iou = bbox_iou(expand_pred_xywh, expand_bboxes)  # 所有格子的3个预测框 分别 和  150个ground truth  计算iou。   (?, grid_h, grid_w, 3, 150)
-    max_iou = tf.expand_dims(tf.reduce_max(iou, axis=-1), axis=-1)  # 与150个ground truth的iou中，保留最大那个iou。  (?, grid_h, grid_w, 3, 1)
+    # 3. xxxiou_loss and category loss are relatively simple. The important thing is conf_loss, which is a focal_loss
+    # There are two steps: the first step is to determine which grid_h * grid_w * 3 prediction boxes are used as counterexamples; the second step is to calculate focal_loss.
+    expand_pred_xywh = pred_xywh[:, :, :, :, np.newaxis, :]  # Expand to (?, grid_h, grid_w, 3,   1, 4)
+    expand_bboxes = bboxes[:, np.newaxis, np.newaxis, np.newaxis, :, :]  # Expand to (?,      1,      1, 1, 150, 4)
+    iou = bbox_iou(expand_pred_xywh, expand_bboxes)  # The 3 prediction boxes of all grids and 150 ground truth respectively calculate iou.   (?, grid_h, grid_w, 3, 150
+    max_iou = tf.expand_dims(tf.reduce_max(iou, axis=-1), axis=-1)  # Among 150 ground truth iou, keep the largest iou. (?, grid_h, grid_w, 3, 1)
 
-    # respond_bgd代表  这个分支输出的 grid_h * grid_w * 3 个预测框是否是 反例（背景）
-    # label有物体，respond_bgd是0。 没物体的话：如果和某个gt(共150个)的iou超过iou_loss_thresh，respond_bgd是0；如果和所有gt(最多150个)的iou都小于iou_loss_thresh，respond_bgd是1。
-    # respond_bgd是0代表有物体，不是反例；  权重respond_bgd是1代表没有物体，是反例。
-    # 有趣的是，模型训练时由于不断更新，对于同一张图片，两次预测的 grid_h * grid_w * 3 个预测框（对于这个分支输出）  是不同的。用的是这些预测框来与gt计算iou来确定哪些预测框是反例。
-    # 而不是用固定大小（不固定位置）的先验框。
+    # respond_bgd represents whether the grid_h * grid_w * 3 prediction boxes output by this branch are counterexamples (background)
+    # label has an object, respond_bgd is 0. If there is no object: if the iou with a certain gt (150 in total) exceeds iou_loss_thresh, respond_bgd is 0; if the iou with all gt (150 at most) is less than iou_loss_thresh, respond_bgd is 1.
+    # respond_bgd is 0 means there is an object, which is not a counterexample; the weight respond_bgd is 1 means there is no object, which is a counterexample.
+    # Interestingly, due to constant updates during model training, for the same picture, the grid_h * grid_w * 3 prediction boxes (for this branch output) of the two predictions are different. These prediction boxes are used to calculate iou to determine which prediction boxes are counterexamples.
+    # Instead of using a priori box of fixed size (not fixed position).
     respond_bgd = (1.0 - respond_bbox) * tf.cast(max_iou < iou_loss_thresh, tf.float32)
 
-    # 二值交叉熵损失
+    # Binary cross entropy loss
     pos_loss = respond_bbox * (0 - K.log(pred_conf + K.epsilon()))
     neg_loss = respond_bgd  * (0 - K.log(1 - pred_conf + K.epsilon()))
 
     conf_loss = pos_loss + neg_loss
-    # 回顾respond_bgd，某个预测框和某个gt的iou超过iou_loss_thresh，不被当作是反例。在参与“预测的置信位 和 真实置信位 的 二值交叉熵”时，这个框也可能不是正例(label里没标这个框是1的话)。这个框有可能不参与置信度loss的计算。
-    # 这种框一般是gt框附近的框，或者是gt框所在格子的另外两个框。它既不是正例也不是反例不参与置信度loss的计算。（论文里称之为ignore）
+    # Looking back at respond_bgd, the iou of a certain prediction box and a certain gt exceeds iou_loss_thresh, which is not regarded as a counterexample. When participating in the "Binary Cross Entropy of Predicted Confidence Level and True Confidence Level", this box may not be a positive example (if this box is not marked as 1 in the label). This box may not participate in the calculation of confidence loss.
+    # This kind of box is generally the box near the gt box, or the other two boxes of the grid where the gt box is located. It is neither a positive example nor a negative example. It does not participate in the calculation of the confidence loss. (Called ignore in the paper
 
-    ciou_loss = tf.reduce_mean(tf.reduce_sum(ciou_loss, axis=[1, 2, 3, 4]))  # 每个样本单独计算自己的ciou_loss，再求平均值
-    conf_loss = tf.reduce_mean(tf.reduce_sum(conf_loss, axis=[1, 2, 3, 4]))  # 每个样本单独计算自己的conf_loss，再求平均值
-    prob_loss = tf.reduce_mean(tf.reduce_sum(prob_loss, axis=[1, 2, 3, 4]))  # 每个样本单独计算自己的prob_loss，再求平均值
+    ciou_loss = tf.reduce_mean(tf.reduce_sum(ciou_loss, axis=[1, 2, 3, 4]))  # Each sample calculates its own ciou_loss separately, and then averages
+    conf_loss = tf.reduce_mean(tf.reduce_sum(conf_loss, axis=[1, 2, 3, 4]))  # Each sample calculates its own conf_loss separately, and then averages
+    prob_loss = tf.reduce_mean(tf.reduce_sum(prob_loss, axis=[1, 2, 3, 4]))  # Each sample calculates its own prob_loss separately, and then averages
 
     return ciou_loss, conf_loss, prob_loss
 
