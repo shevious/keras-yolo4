@@ -37,6 +37,7 @@ if __name__ == '__main__':
     model_path = 'logs/000/'+'ep018-loss25.846.h5' # voc 2007 neck
     model_path = 'logs/000/'+'ep046-loss6.901.h5' # raccoon neck
     model_path = 'ep009-loss3.856.h5' # raccoon fine tuned
+    model_path = 'logs-fine/000/'+ 'ep028-loss3.622.h5' # voc 2012 fine
     anchors_path = 'model_data/yolo4_anchors.txt'
     classes_path = 'model_data/voc_classes.txt'
     #classes_path = 'model_data/raccoon_classes.txt'
@@ -50,11 +51,14 @@ if __name__ == '__main__':
 
     model_image_size = (608, 608)
 
-    # 分数阈值和nms_iou阈值
+    # conf threshold and nms_iou threshold
     conf_thresh = 0.2
     nms_thresh = 0.45
 
     yolo4_model = yolo4_body(Input(shape=model_image_size+(3,)), num_anchors//3, num_classes)
+    print(yolo4_model.summary())
+    #from tensorflow.keras.utils import plot_model
+    #plot_model(yolo4_model, to_file='model.png')
 
     model_path = os.path.expanduser(model_path)
     assert model_path.endswith('.h5'), 'Keras model or weights must be a .h5 file.'
@@ -73,6 +77,7 @@ if __name__ == '__main__':
         else:
             image, boxes, scores, classes = _decode.detect_image(image, True)
             cv2.imshow('image', image)
+            cv2.imwrite('output.jpg', image)
             cv2.waitKey(0)
             cv2.destroyAllWindows()
 

@@ -52,7 +52,7 @@ def _main():
         [[36, 75], [76, 55], [72, 146]],
         [[142, 110], [192, 243], [459, 401]]
     ])
-    # 一些预处理
+    # Some preprocessing
     anchors_stride_base = anchors_stride_base.astype(np.float32)
     anchors_stride_base[0] /= 8
     anchors_stride_base[1] /= 16
@@ -72,7 +72,6 @@ def _main():
         monitor='loss', save_weights_only=True, save_best_only=True, period=1)
     reduce_lr = ReduceLROnPlateau(monitor='loss', factor=0.1, patience=3, verbose=1)
     early_stopping = EarlyStopping(monitor='loss', min_delta=0, patience=10, verbose=1)
-    #evaluation = Evaluate(model_body=model_body, anchors=anchors, class_names=class_index, score_threshold=0.05, tensorboard=logging, weighted_average=True, eval_file='2012_val.txt', log_dir=log_dir)
     evaluation = Evaluate(model_body=model_body, anchors=anchors, class_names=class_index, score_threshold=0.05,
         tensorboard=logging, weighted_average=True, eval_file=annotation_val_path, log_dir=log_dir)
 
@@ -185,14 +184,14 @@ def create_model(input_shape, anchors_stride_base, num_classes, load_pretrained=
 def random_fill(image, bboxes):
     if random.random() < 0.5:
         h, w, _ = image.shape
-        # 水平方向填充黑边，以训练小目标检测
+        # Fill the black border horizontally to train small target detection
         if random.random() < 0.5:
             dx = random.randint(int(0.5*w), int(1.5*w))
             black_1 = np.zeros((h, dx, 3), dtype='uint8')
             black_2 = np.zeros((h, dx, 3), dtype='uint8')
             image = np.concatenate([black_1, image, black_2], axis=1)
             bboxes[:, [0, 2]] += dx
-        # 垂直方向填充黑边，以训练小目标检测
+        # Fill the black edges vertically to train small target detection
         else:
             dy = random.randint(int(0.5*h), int(1.5*h))
             black_1 = np.zeros((dy, w, 3), dtype='uint8')
@@ -250,17 +249,17 @@ def random_translate(image, bboxes):
     return image, bboxes
 
 def image_preprocess(image, target_size, gt_boxes):
-    # 传入训练的图片是rgb格式
+    # The images passed in for training are in rgb format
     ih, iw = target_size
     h, w = image.shape[:2]
-    interps = [   # 随机选一种插值方式
+    interps = [   # Randomly choose an interpolation method
         cv2.INTER_NEAREST,
         cv2.INTER_LINEAR,
         cv2.INTER_AREA,
         cv2.INTER_CUBIC,
         cv2.INTER_LANCZOS4,
     ]
-    method = np.random.choice(interps)   # 随机选一种插值方式
+    method = np.random.choice(interps)   # Randomly choose an interpolation method
     scale_x = float(iw) / w
     scale_y = float(ih) / h
     image = cv2.resize(image, None, None, fx=scale_x, fy=scale_y, interpolation=method)
@@ -281,7 +280,7 @@ def parse_annotation(annotation, train_input_size, annotation_type):
     image = np.array(cv2.imread(image_path))
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-    # 没有标注物品，即每个格子都当作背景处理
+    # No items are marked, that is, each grid is treated as a background
     exist_boxes = True
     if len(line) == 1:
         bboxes = np.array([[10, 10, 101, 103, 0]])
@@ -289,7 +288,7 @@ def parse_annotation(annotation, train_input_size, annotation_type):
     else:
         bboxes = np.array([list(map(lambda x: int(float(x)), box.split(','))) for box in line[1:]])
     if annotation_type == 'train':
-        # image, bboxes = random_fill(np.copy(image), np.copy(bboxes))    # 数据集缺乏小物体时打开
+        # image, bboxes = random_fill(np.copy(image), np.copy(bboxes))    # Open when the dataset lacks small objects
         image, bboxes = random_horizontal_flip(np.copy(image), np.copy(bboxes))
         image, bboxes = random_crop(np.copy(image), np.copy(bboxes))
         image, bboxes = random_translate(np.copy(image), np.copy(bboxes))
@@ -300,14 +299,14 @@ def data_generator(annotation_lines, batch_size, anchors, num_classes, max_bbox_
     '''data generator for fit_generator'''
     n = len(annotation_lines)
     i = 0
-    #多尺度训练
+    # Multi-scale training
     train_input_sizes = [320, 352, 384, 416, 448, 480, 512, 544, 576, 608]
     strides = np.array([8, 16, 32])
 
     while True:
         train_input_size = random.choice(train_input_sizes)
 
-        # 输出的网格数
+        # Number of output grids
         train_output_sizes = train_input_size // strides
 
         batch_image = np.zeros((batch_size, train_input_size, train_input_size, 3))

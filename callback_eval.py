@@ -57,7 +57,7 @@ class Evaluate(keras.callbacks.Callback):
 
         #self.sess = K.get_session()
 
-        # 验证时的分数阈值和nms_iou阈值
+        # The score threshold and nms_iou threshold during verification
         conf_thresh = score_threshold
         nms_thresh = 0.45
 
@@ -277,7 +277,7 @@ class Evaluate(keras.callbacks.Callback):
         self.model_body.load_weights(weight_latest)
         self.calc_result(epoch)
 
-        #计算mAP
+        # calulate mAP
         aps = []
         counts = []
         for classname in self.class_names:
