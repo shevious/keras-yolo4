@@ -2,7 +2,11 @@
 
 [![license](https://img.shields.io/github/license/mashape/apistatus.svg)](LICENSE)
 
-# 请使用更完善的版本:
+# This is the forked repo from:  
+
+https://github.com/Ma-Dan/keras-yolo4  
+
+(Some minor modification for tensorflow 2.x and english translation for comments.)
 
 # [https://github.com/miemie2013/Keras-YOLOv4](https://github.com/miemie2013/Keras-YOLOv4)
 
