@@ -8,11 +8,9 @@ https://github.com/Ma-Dan/keras-yolo4
 
 (Some minor modification for tensorflow 2.x and english translation for comments.)
 
-# [https://github.com/miemie2013/Keras-YOLOv4](https://github.com/miemie2013/Keras-YOLOv4)
-
 # Please visit here for more complete model:
 
-# [https://github.com/miemie2013/Keras-YOLOv4](https://github.com/miemie2013/Keras-YOLOv4)
+[https://github.com/miemie2013/Keras-YOLOv4](https://github.com/miemie2013/Keras-YOLOv4)
 
 ## Introduction
 
